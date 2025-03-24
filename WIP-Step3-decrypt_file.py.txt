@@ -1,0 +1,39 @@
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+# Load private key
+with open("private_key.pem", "rb") as f:
+    private_key = serialization.load_pem_private_key(f.read(), password=None)
+
+# Load encrypted AES key and IV
+with open("encrypted_key.bin", "rb") as f:
+    encrypted_key = f.read()
+
+with open("iv.bin", "rb") as f:
+    iv = f.read()
+
+# Decrypt AES key
+aes_key = private_key.decrypt(
+    encrypted_key,
+    padding.OAEP(
+        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+        algorithm=hashes.SHA256(),
+        label=None
+    )
+)
+
+# Load encrypted file
+with open("encrypted_file.pgp", "rb") as f:
+    encrypted_data = f.read()
+
+# Decrypt file
+cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv))
+decryptor = cipher.decryptor()
+decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+# Save decrypted file
+with open("decrypted.txt", "wb") as f:
+    f.write(decrypted_data)
+
+print("✅ File decrypted: decrypted.txt")
